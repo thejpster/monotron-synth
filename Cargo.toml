@@ -1,0 +1,12 @@
+[package]
+name = "monotron-synth"
+version = "0.1.0"
+authors = ["Jonathan 'theJPster' Pallant <github@thejpster.org.uk>"]
+
+[dev-dependencies.libpulse-binding]
+path = "../pulse-binding-rust/pulse-binding"
+default-features = false
+
+[dev-dependencies.libpulse-simple-binding]
+path = "../pulse-binding-rust/pulse-binding-simple"
+default-features = false
