@@ -2,11 +2,20 @@
 name = "monotron-synth"
 version = "0.1.0"
 authors = ["Jonathan 'theJPster' Pallant <github@thejpster.org.uk>"]
+description = "A simple 1980's home computer style synthesiser that sounds pretty bad."
+keywords = ["arm", "cortex-m", "template", "synthesiser", "synthesizer", "audio"]
+categories = ["embedded", "no-std"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/thejpster/monotron-synth"
 
+# These are only needed for the Linux example as it uses Pulse Audio. If you
+# use Ubuntu 18.04 you might fall foul of
+# https://github.com/jnqnfe/pulse-binding-rust/issues/7. I have a locally
+# patched copy :(.
 [dev-dependencies.libpulse-binding]
-path = "../pulse-binding-rust/pulse-binding"
-default-features = false
+#path = "../pulse-binding-rust/pulse-binding"
+version = "2.2"
 
 [dev-dependencies.libpulse-simple-binding]
-path = "../pulse-binding-rust/pulse-binding-simple"
-default-features = false
+#path = "../pulse-binding-rust/pulse-binding-simple"
+version = "2.2"
