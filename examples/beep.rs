@@ -2,7 +2,7 @@ extern crate libpulse_binding as pulse;
 extern crate libpulse_simple_binding as psimple;
 extern crate monotron_synth;
 
-use monotron_synth::{Note, Synth};
+use monotron_synth::{Channel, Note, Synth, Waveform, MAX_VOLUME};
 use psimple::Simple;
 use pulse::stream::Direction;
 
@@ -31,23 +31,37 @@ fn main() -> Result<(), pulse::error::PAErr> {
     let mut synth = Synth::new(SAMPLE_RATE);
 
     let notes = [
-        (Note::C4, 250),
-        (Note::G4, 125),
-        (Note::Rest, 125),
-        (Note::A4, 125),
-        (Note::Rest, 125),
-        (Note::F4, 500),
+        (Channel::Channel0, Note::C4, 0, MAX_VOLUME),
+        (Channel::Channel1, Note::E4, 30, MAX_VOLUME),
+        (Channel::Channel2, Note::G4, 60, MAX_VOLUME),
+        (Channel::Channel2, Note::G4, 90, 0),
+        (Channel::Channel1, Note::E4, 120, 0),
     ];
-    let mut notes_iter = notes.iter().cycle();
 
+    const WAVEFORM: Waveform = Waveform::Sawtooth;
+    let mut play_idx = 0;
+    let mut frame_count = 0;
     loop {
-        let (note, duration_ms) = *notes_iter.next().unwrap();
-        let duration_samples = synth.duration_ms_to_samples(duration_ms);
-        synth.play(note, duration_samples);
-        while synth.is_playing() {
+        let (channel, note, start_frame, volume) = notes[play_idx];
+        if frame_count == start_frame {
+            println!("{:?} {:?} @ {}", channel, note, start_frame);
+            synth.play(channel, note, None, volume, WAVEFORM);
+            play_idx += 1;
+            if play_idx >= notes.len() {
+                play_idx = 0;
+                frame_count = 0;
+            }
+        } else {
+            println!("{}", frame_count);
+            frame_count += 1;
+            // Play a frame
             let mut samples = [0; FRAME_LENGTH_SAMPLES];
             for sample in samples.iter_mut() {
-                *sample = synth.next().into();
+                let s = synth.next();
+                *sample = s.into();
+                if *sample == 0 || *sample == 255 {
+                    print!("Clip!");
+                }
             }
             s.write(&samples)?;
         }
