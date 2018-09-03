@@ -57,6 +57,10 @@ pub struct Sample(i8);
 #[derive(Debug)]
 pub struct Duration(u32);
 
+/// A frequency in centi-hertz.
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Frequency(u32);
+
 /// Notes on an piano keyboard, where A4 = 440 Hz.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Note {
@@ -283,15 +287,15 @@ impl Synth {
         self.sample_rate
     }
 
-    pub fn play(
+    pub fn play<T>(
         &mut self,
         channel: Channel,
-        note: Note,
+        note: T,
         duration: Option<Duration>,
         volume: u8,
         waveform: Waveform,
-    ) {
-        let step = self.note_to_phase_step(note);
+    ) where T: Into<Frequency> {
+        let step = self.frequency_to_phase_step(note.into());
         let ch = &mut self.channels[channel as usize];
         ch.phase_accumulator = 0;
         ch.phase_step = step;
@@ -343,9 +347,32 @@ impl Synth {
         Self::downmix(accu)
     }
 
-    fn note_to_phase_step(&self, note: Note) -> u16 {
-        // notes are in centihz
-        let step = (note.centi_hertz() * 65536) / (self.sample_rate * 100);
+    /// Our waveforms are 256 samples long. This routine converts a playback
+    /// frequency into an amount we increment our phase accumulator every
+    /// playback sample. The result is a 16-bit fixed-point value (8 bits
+    /// integer + 8 bits fraction). That is, we divide accumulated phase by
+    /// 256 to get the integer sample index, and carry the fraction for next
+    /// time around.
+    ///
+    /// To play the waveform at 1 Hz, we need to upscale the 256 samples to
+    /// `self.sample_rate` samples, with a phase step of 256 / self.sample_rate.
+    ///
+    /// To play the waveform at 10 Hz, we need to upscale the 256 samples to
+    /// `self.sample_rate` samples, with a phase step of 10 * (256 / self.sample_rate).
+    ///
+    /// To play the waveform at 1000 Hz, we need to upscale the 256 samples to
+    /// `self.sample_rate` samples, with a phase step of 1000 * (256 / self.sample_rate).
+    ///
+    /// `phase_step = note.hertz() * (256 / self.sample_rate)`
+    /// `phase_step_fp = 256 * note.hertz() * (256 / self.sample_rate)`
+    /// `phase_step_fp = 256 * note.centi_hertz() * (256 / (100 * self.sample_rate))`
+    fn frequency_to_phase_step(&self, frequency: Frequency) -> u16 {
+        // This is carefully arrange to try and avoid overflow. We should be
+        // good up to around 167.8 kHz (which is far higher than we can play).
+        let mut step = frequency.centi_hertz() * 256;
+        step /= self.sample_rate;
+        step *= 256;
+        step /= 100;
         step as u16
     }
 
@@ -384,5 +411,25 @@ impl Note {
 
     pub fn centi_hertz(self) -> u32 {
         self as u32
+    }
+}
+
+impl Frequency {
+    pub fn from_hertz(hertz: u16) -> Frequency {
+        Frequency(hertz as u32 * 16)
+    }
+
+    pub fn from_centi_hertz(centi_hertz: u32) -> Frequency {
+        Frequency(centi_hertz)
+    }
+
+    pub fn centi_hertz(&self) -> u32 {
+        self.0
+    }
+}
+
+impl core::convert::Into<Frequency> for Note {
+    fn into(self) -> Frequency {
+        Frequency::from_centi_hertz(self.centi_hertz())
     }
 }
