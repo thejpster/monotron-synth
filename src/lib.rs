@@ -24,7 +24,6 @@ pub const CHANNEL_3: Channel = Channel::Channel3;
 pub struct Synth {
     sample_rate: u32,
     channels: [Oscillator; 4],
-    playing: u8,
 }
 
 /// Our oscillator produces one of four waveforms.
@@ -247,7 +246,6 @@ impl Synth {
     pub fn new(sample_rate: u32) -> Synth {
         Synth {
             sample_rate,
-            playing: 0,
             channels: [
                 Oscillator {
                     phase_accumulator: 0,
@@ -285,10 +283,6 @@ impl Synth {
         self.sample_rate
     }
 
-    pub fn is_playing(&self, channel: Channel) -> bool {
-        self.channels[channel as usize].volume > 0
-    }
-
     pub fn play(
         &mut self,
         channel: Channel,
@@ -299,9 +293,6 @@ impl Synth {
     ) {
         let step = self.note_to_phase_step(note);
         let ch = &mut self.channels[channel as usize];
-        if ch.volume == 0 {
-            self.playing += 1;
-        }
         ch.phase_accumulator = 0;
         ch.phase_step = step;
         ch.volume = volume;
@@ -314,8 +305,12 @@ impl Synth {
         };
     }
 
-    pub fn off(&mut self, _channel: Channel) {
-        unimplemented!();
+    pub fn off(&mut self, channel: Channel) {
+        let ch = &mut self.channels[channel as usize];
+        ch.volume = 0;
+        ch.phase_accumulator = 0;
+        ch.phase_step = 0;
+        ch.duration = None;
     }
 
     pub fn duration_ms_to_samples(&self, millis: u32) -> Duration {
@@ -326,7 +321,7 @@ impl Synth {
         let mut accu: i32 = 0;
         for osc in &mut self.channels {
             osc.phase_accumulator = osc.phase_accumulator.wrapping_add(osc.phase_step);
-            let offset = (osc.phase_accumulator >> 8) as u8;
+            let offset = osc.phase_accumulator >> 8;
             let hi_res_sample = (osc.waveform[offset as usize] as i32) * (osc.volume as i32);
             accu += hi_res_sample;
             let silence = if let Some(ref mut duration) = osc.duration {
@@ -342,7 +337,6 @@ impl Synth {
                 false
             };
             if silence {
-                self.playing -= 1;
                 osc.volume = 0;
             }
         }
