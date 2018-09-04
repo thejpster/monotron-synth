@@ -51,52 +51,115 @@ fn main() -> Result<(), Error> {
 
     let mut output_file = std::fs::File::create("audio.raw")?;
 
-    let notes = [
-        (Channel::Channel0, 0, Some((Note::C2, MAX_VOLUME, Waveform::Sawtooth))),
-        (Channel::Channel0, 15, None),
-        (Channel::Channel0, 30, Some((Note::C2, MAX_VOLUME, Waveform::Sawtooth))),
-        (Channel::Channel1, 30, Some((Note::C3, MAX_VOLUME, Waveform::Noise))),
-        (Channel::Channel1, 33, None),
-        (Channel::Channel0, 45, None),
-        (Channel::Channel0, 60, Some((Note::G2, MAX_VOLUME, Waveform::Sawtooth))),
-        (Channel::Channel0, 75, None),
-        (Channel::Channel0, 90, Some((Note::G2, MAX_VOLUME, Waveform::Sawtooth))),
-        (Channel::Channel1, 90, Some((Note::C3, MAX_VOLUME, Waveform::Noise))),
-        (Channel::Channel1, 93, None),
-        (Channel::Channel0, 105, None),
-        (Channel::Channel1, 120, None),
-    ];
+    struct Track<'a> {
+        channel: Channel,
+        play_idx: usize,
+        max_frames: usize,
+        notes: &'a [(usize, Option<(Note, u8, Waveform)>)]
+    }
 
-    let mut play_idx = 0;
+    // Bass line
+    let mut track0 = Track {
+        channel: Channel::Channel0,
+        play_idx: 0,
+        max_frames: 120,
+        notes: &[
+            (0, Some((Note::C2, MAX_VOLUME, Waveform::Sawtooth))),
+            (5, None),
+            (15, Some((Note::C2, MAX_VOLUME, Waveform::Sawtooth))),
+            (20, None),
+            (30, Some((Note::C2, MAX_VOLUME, Waveform::Sawtooth))),
+            (35, None),
+            (45, Some((Note::C2, MAX_VOLUME, Waveform::Sawtooth))),
+            (50, None),
+            (60, Some((Note::G2, MAX_VOLUME, Waveform::Sawtooth))),
+            (65, None),
+            (75, Some((Note::G2, MAX_VOLUME, Waveform::Sawtooth))),
+            (80, None),
+            (90, Some((Note::G2, MAX_VOLUME, Waveform::Sawtooth))),
+            (95, None),
+            (105, Some((Note::G2, MAX_VOLUME, Waveform::Sawtooth))),
+            (110, None),
+        ]
+    };
+
+    // Hi-hat
+    let mut track1 = Track {
+        channel: Channel::Channel1,
+        play_idx: 0,
+        max_frames: 120,
+        notes: &[
+        (30, Some((Note::C3, MAX_VOLUME, Waveform::Noise))),
+        (33, None),
+        (90, Some((Note::C3, MAX_VOLUME, Waveform::Noise))),
+        (93, None),
+        ]
+    };
+
+    // Scale
+    let mut track2 = Track {
+        channel: Channel::Channel2,
+        play_idx: 0,
+        max_frames: 120,
+        notes: &[
+        (0, Some((Note::C4, MAX_VOLUME, Waveform::Sine))),
+        (15, Some((Note::D4, MAX_VOLUME, Waveform::Sine))),
+        (30, Some((Note::E4, MAX_VOLUME, Waveform::Sine))),
+        (45, Some((Note::F4, MAX_VOLUME, Waveform::Sine))),
+        (60, Some((Note::G4, MAX_VOLUME, Waveform::Sine))),
+        (75, Some((Note::A4, MAX_VOLUME, Waveform::Sine))),
+        (90, Some((Note::B4, MAX_VOLUME, Waveform::Sine))),
+        (105, Some((Note::C5, MAX_VOLUME, Waveform::Sine))),
+        ]
+    };
+
+    // Toot-toot
+    let mut track3 = Track {
+        channel: Channel::Channel3,
+        play_idx: 0,
+        max_frames: 240,
+        notes: &[
+            (0, Some((Note::C4, MAX_VOLUME / 4, Waveform::Square))),
+            (20, None),
+            (30, Some((Note::C4, MAX_VOLUME / 4, Waveform::Square))),
+            (50, None),
+        ]
+    };
+
     let mut frame_count = 0;
     loop {
-        let (channel, start_frame, event) = notes[play_idx];
-        if frame_count == start_frame {
-            if let Some((note, volume, waveform)) = event {
-                println!("{:?} {:?} @ {} in {:?}", channel, note, start_frame, waveform);
-                synth.play(channel, note, None, volume, waveform);
-            } else {
-                synth.off(channel);
-            }
-            play_idx += 1;
-            if play_idx >= notes.len() {
-                play_idx = 0;
-                frame_count = 0;
-            }
-        } else {
-            println!("{}", frame_count);
-            frame_count += 1;
-            // Play a frame
-            let mut samples = [0; FRAME_LENGTH_SAMPLES];
-            for sample in samples.iter_mut() {
-                let s = synth.next();
-                *sample = s.into();
-                if *sample == 0 || *sample == 255 {
-                    print!("Clip!");
+        let mut again = true;
+        while again  {
+            again = false;
+            for track in &mut[&mut track0, &mut track1, &mut track2, &mut track3] {
+                let (start_frame, event) = track.notes[track.play_idx];
+                if (frame_count % track.max_frames) == start_frame {
+                    if let Some((note, volume, waveform)) = event {
+                        println!("{:?} {:?} @ {} in {:?}", track.channel, note, start_frame, waveform);
+                        synth.play(track.channel, note, None, volume, waveform);
+                    } else {
+                        synth.off(track.channel);
+                    }
+                    track.play_idx += 1;
+                    if track.play_idx >= track.notes.len() {
+                        track.play_idx = 0;
+                    }
+                    again = true;
                 }
             }
-            output_file.write_all(&samples)?;
-            s.write(&samples)?;
         }
+        frame_count += 1;
+        println!("{}", frame_count);
+        // Play a frame
+        let mut samples = [0; FRAME_LENGTH_SAMPLES];
+        for sample in samples.iter_mut() {
+            let s = synth.next();
+            *sample = s.into();
+            if *sample == 0 || *sample == 255 {
+                print!("Clip!");
+            }
+        }
+        output_file.write_all(&samples)?;
+        s.write(&samples)?;
     }
 }
