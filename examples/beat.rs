@@ -2,6 +2,7 @@ extern crate libpulse_binding as pulse;
 extern crate libpulse_simple_binding as psimple;
 extern crate monotron_synth;
 
+use std::io::Write;
 use monotron_synth::{Channel, Note, Synth, Waveform, MAX_VOLUME};
 use psimple::Simple;
 use pulse::stream::Direction;
@@ -9,7 +10,25 @@ use pulse::stream::Direction;
 const SAMPLE_RATE: u32 = 80_000_000 / 2112;
 const FRAME_LENGTH_SAMPLES: usize = SAMPLE_RATE as usize / 60;
 
-fn main() -> Result<(), pulse::error::PAErr> {
+#[derive(Debug)]
+enum Error {
+    AudioError(pulse::error::PAErr),
+    IOError(std::io::Error)
+}
+
+impl std::convert::From<pulse::error::PAErr> for Error {
+    fn from(err: pulse::error::PAErr) -> Error {
+        Error::AudioError(err)
+    }
+}
+
+impl std::convert::From<std::io::Error> for Error {
+    fn from(err: std::io::Error) -> Error {
+        Error::IOError(err)
+    }
+}
+
+fn main() -> Result<(), Error> {
     let spec = pulse::sample::Spec {
         format: pulse::sample::Format::U8,
         channels: 1,
@@ -29,6 +48,8 @@ fn main() -> Result<(), pulse::error::PAErr> {
     ).unwrap();
 
     let mut synth = Synth::new(SAMPLE_RATE);
+
+    let mut output_file = std::fs::File::create("audio.raw")?;
 
     let notes = [
         (Channel::Channel0, 0, Some((Note::C2, MAX_VOLUME, Waveform::Sawtooth))),
@@ -74,6 +95,7 @@ fn main() -> Result<(), pulse::error::PAErr> {
                     print!("Clip!");
                 }
             }
+            output_file.write_all(&samples)?;
             s.write(&samples)?;
         }
     }
