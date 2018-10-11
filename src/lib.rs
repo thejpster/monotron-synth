@@ -272,13 +272,10 @@ impl Synth {
         self.sample_rate
     }
 
-    pub fn play<T>(
-        &mut self,
-        channel: Channel,
-        note: T,
-        volume: u8,
-        waveform: Waveform,
-    ) where T: Into<Frequency> {
+    pub fn play<T>(&mut self, channel: Channel, note: T, volume: u8, waveform: Waveform)
+    where
+        T: Into<Frequency>,
+    {
         let step = self.frequency_to_phase_step(note.into());
         let ch = &mut self.channels[channel as usize];
         ch.phase_accumulator = 0;
@@ -305,8 +302,7 @@ impl Synth {
             osc.phase_accumulator = osc.phase_accumulator.wrapping_add(osc.phase_step);
             let offset = osc.phase_accumulator >> 8;
             // phase_accumulator is a u16. After >> 8 we get a u8, so this is safe.
-            let hi_res_sample =
-                (unsafe { *osc.waveform.get_unchecked(offset as usize) } as i32)
+            let hi_res_sample = (unsafe { *osc.waveform.get_unchecked(offset as usize) } as i32)
                 * (osc.volume as i32);
             accu += hi_res_sample;
         }

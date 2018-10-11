@@ -2,10 +2,10 @@ extern crate libpulse_binding as pulse;
 extern crate libpulse_simple_binding as psimple;
 extern crate monotron_synth;
 
-use std::io::Write;
 use monotron_synth::{Channel, Note, Synth, Waveform, MAX_VOLUME};
 use psimple::Simple;
 use pulse::stream::Direction;
+use std::io::Write;
 
 const SAMPLE_RATE: u32 = 80_000_000 / 2112;
 const FRAME_LENGTH_SAMPLES: usize = SAMPLE_RATE as usize / 60;
@@ -13,7 +13,7 @@ const FRAME_LENGTH_SAMPLES: usize = SAMPLE_RATE as usize / 60;
 #[derive(Debug)]
 enum Error {
     AudioError(pulse::error::PAErr),
-    IOError(std::io::Error)
+    IOError(std::io::Error),
 }
 
 impl std::convert::From<pulse::error::PAErr> for Error {
@@ -55,7 +55,7 @@ fn main() -> Result<(), Error> {
         channel: Channel,
         play_idx: usize,
         max_frames: usize,
-        notes: &'a [(usize, Option<(Note, u8, Waveform)>)]
+        notes: &'a [(usize, Option<(Note, u8, Waveform)>)],
     }
 
     // Bass line
@@ -80,7 +80,7 @@ fn main() -> Result<(), Error> {
             (95, None),
             (105, Some((Note::G2, MAX_VOLUME, Waveform::Sawtooth))),
             (110, None),
-        ]
+        ],
     };
 
     // Hi-hat
@@ -89,11 +89,11 @@ fn main() -> Result<(), Error> {
         play_idx: 0,
         max_frames: 120,
         notes: &[
-        (30, Some((Note::C3, MAX_VOLUME, Waveform::Noise))),
-        (33, None),
-        (90, Some((Note::C3, MAX_VOLUME, Waveform::Noise))),
-        (93, None),
-        ]
+            (30, Some((Note::C3, MAX_VOLUME, Waveform::Noise))),
+            (33, None),
+            (90, Some((Note::C3, MAX_VOLUME, Waveform::Noise))),
+            (93, None),
+        ],
     };
 
     // Scale
@@ -102,27 +102,30 @@ fn main() -> Result<(), Error> {
         play_idx: 0,
         max_frames: 120,
         notes: &[
-        (0, Some((Note::C4, MAX_VOLUME, Waveform::Sine))),
-        (15, Some((Note::D4, MAX_VOLUME, Waveform::Sine))),
-        (30, Some((Note::E4, MAX_VOLUME, Waveform::Sine))),
-        (45, Some((Note::F4, MAX_VOLUME, Waveform::Sine))),
-        (60, Some((Note::G4, MAX_VOLUME, Waveform::Sine))),
-        (75, Some((Note::A4, MAX_VOLUME, Waveform::Sine))),
-        (90, Some((Note::B4, MAX_VOLUME, Waveform::Sine))),
-        (105, Some((Note::C5, MAX_VOLUME, Waveform::Sine))),
-        ]
+            (0, Some((Note::C4, MAX_VOLUME, Waveform::Sine))),
+            (15, Some((Note::D4, MAX_VOLUME, Waveform::Sine))),
+            (30, Some((Note::E4, MAX_VOLUME, Waveform::Sine))),
+            (45, Some((Note::F4, MAX_VOLUME, Waveform::Sine))),
+            (60, Some((Note::G4, MAX_VOLUME, Waveform::Sine))),
+            (75, Some((Note::A4, MAX_VOLUME, Waveform::Sine))),
+            (90, Some((Note::B4, MAX_VOLUME, Waveform::Sine))),
+            (105, Some((Note::C5, MAX_VOLUME, Waveform::Sine))),
+        ],
     };
 
     let mut frame_count = 0;
     loop {
         let mut again = true;
-        while again  {
+        while again {
             again = false;
-            for track in &mut[&mut track0, &mut track1, &mut track2] {
+            for track in &mut [&mut track0, &mut track1, &mut track2] {
                 let (start_frame, event) = track.notes[track.play_idx];
                 if (frame_count % track.max_frames) == start_frame {
                     if let Some((note, volume, waveform)) = event {
-                        println!("{:?} {:?} @ {} in {:?}", track.channel, note, start_frame, waveform);
+                        println!(
+                            "{:?} {:?} @ {} in {:?}",
+                            track.channel, note, start_frame, waveform
+                        );
                         synth.play(track.channel, note, volume, waveform);
                     } else {
                         synth.off(track.channel);
