@@ -3,19 +3,17 @@
 
 pub const MAX_VOLUME: u8 = 255;
 
-/// We have a four channel synthesiser.
+/// We have a three channel synthesiser.
 #[derive(Debug, Copy, Clone)]
 pub enum Channel {
     Channel0,
     Channel1,
     Channel2,
-    Channel3,
 }
 
 pub const CHANNEL_0: Channel = Channel::Channel0;
 pub const CHANNEL_1: Channel = Channel::Channel1;
 pub const CHANNEL_2: Channel = Channel::Channel2;
-pub const CHANNEL_3: Channel = Channel::Channel3;
 
 /// Our synthesiser. You can tell it to play notes, then repeatedly ask it for
 /// samples (which are calculated as you ask for them). You could either
@@ -24,7 +22,7 @@ pub const CHANNEL_3: Channel = Channel::Channel3;
 /// outputs of the four channels.
 pub struct Synth {
     sample_rate: u32,
-    channels: [Oscillator; 4],
+    channels: [Oscillator; 3],
 }
 
 /// Our oscillator produces one of four waveforms.
@@ -47,18 +45,11 @@ struct Oscillator {
     phase_accumulator: u16,
     /// Controls the volume of this channel relative to the others.
     volume: u8,
-    /// If None, note is infinite. It Some(x), x is reduced by one for every
-    /// sample played, and when it hits zero, the channel is muted.
-    duration: Option<Duration>,
 }
 
 /// A single signed 8-bit audio sample.
 #[derive(Debug)]
 pub struct Sample(i8);
-
-/// The length of a note in sample ticks.
-#[derive(Debug)]
-pub struct Duration(u32);
 
 /// A frequency in centi-hertz.
 #[derive(Debug, Copy, Clone, PartialEq)]
@@ -259,28 +250,18 @@ impl Synth {
                     phase_accumulator: 0,
                     phase_step: 0,
                     volume: 0,
-                    duration: None,
                     waveform: &SINE_256,
                 },
                 Oscillator {
                     phase_accumulator: 0,
                     phase_step: 0,
                     volume: 0,
-                    duration: None,
                     waveform: &SINE_256,
                 },
                 Oscillator {
                     phase_accumulator: 0,
                     phase_step: 0,
                     volume: 0,
-                    duration: None,
-                    waveform: &SINE_256,
-                },
-                Oscillator {
-                    phase_accumulator: 0,
-                    phase_step: 0,
-                    volume: 0,
-                    duration: None,
                     waveform: &SINE_256,
                 },
             ],
@@ -295,7 +276,6 @@ impl Synth {
         &mut self,
         channel: Channel,
         note: T,
-        duration: Option<Duration>,
         volume: u8,
         waveform: Waveform,
     ) where T: Into<Frequency> {
@@ -304,7 +284,6 @@ impl Synth {
         ch.phase_accumulator = 0;
         ch.phase_step = step;
         ch.volume = volume;
-        ch.duration = duration;
         ch.waveform = match waveform {
             Waveform::Sine => &SINE_256,
             Waveform::Noise => &NOISE_256,
@@ -318,11 +297,6 @@ impl Synth {
         ch.volume = 0;
         ch.phase_accumulator = 0;
         ch.phase_step = 0;
-        ch.duration = None;
-    }
-
-    pub fn duration_ms_to_samples(&self, millis: u32) -> Duration {
-        Duration::from_millis(self.sample_rate, millis)
     }
 
     pub fn next(&mut self) -> Sample {
@@ -330,23 +304,11 @@ impl Synth {
         for osc in &mut self.channels {
             osc.phase_accumulator = osc.phase_accumulator.wrapping_add(osc.phase_step);
             let offset = osc.phase_accumulator >> 8;
-            let hi_res_sample = (osc.waveform[offset as usize] as i32) * (osc.volume as i32);
+            // phase_accumulator is a u16. After >> 8 we get a u8, so this is safe.
+            let hi_res_sample =
+                (unsafe { *osc.waveform.get_unchecked(offset as usize) } as i32)
+                * (osc.volume as i32);
             accu += hi_res_sample;
-            let silence = if let Some(ref mut duration) = osc.duration {
-                if duration.0 > 0 {
-                    duration.0 -= 1;
-                }
-                if duration.0 == 0 {
-                    true
-                } else {
-                    false
-                }
-            } else {
-                false
-            };
-            if silence {
-                osc.volume = 0;
-            }
         }
         Self::downmix(accu)
     }
@@ -391,12 +353,6 @@ impl Synth {
         }
         // low_res_sample now in [-128..=127]
         Sample(low_res_sample as i8)
-    }
-}
-
-impl Duration {
-    pub fn from_millis(sample_rate: u32, millis: u32) -> Duration {
-        Duration(sample_rate * millis / 1000)
     }
 }
 

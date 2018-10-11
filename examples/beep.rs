@@ -45,7 +45,7 @@ fn main() -> Result<(), pulse::error::PAErr> {
         let (channel, note, start_frame, volume) = notes[play_idx];
         if frame_count == start_frame {
             println!("{:?} {:?} @ {}", channel, note, start_frame);
-            synth.play(channel, note, None, volume, WAVEFORM);
+            synth.play(channel, note, volume, WAVEFORM);
             play_idx += 1;
             if play_idx >= notes.len() {
                 play_idx = 0;

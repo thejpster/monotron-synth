@@ -1,6 +1,6 @@
 [package]
 name = "monotron-synth"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Jonathan 'theJPster' Pallant <github@thejpster.org.uk>"]
 description = "A simple 1980's home computer style synthesiser that sounds pretty bad."
 keywords = ["arm", "cortex-m", "synthesiser", "synthesizer", "audio"]

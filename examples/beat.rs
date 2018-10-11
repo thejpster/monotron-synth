@@ -113,30 +113,17 @@ fn main() -> Result<(), Error> {
         ]
     };
 
-    // Toot-toot
-    let mut track3 = Track {
-        channel: Channel::Channel3,
-        play_idx: 0,
-        max_frames: 240,
-        notes: &[
-            (0, Some((Note::C4, MAX_VOLUME / 4, Waveform::Square))),
-            (20, None),
-            (30, Some((Note::C4, MAX_VOLUME / 4, Waveform::Square))),
-            (50, None),
-        ]
-    };
-
     let mut frame_count = 0;
     loop {
         let mut again = true;
         while again  {
             again = false;
-            for track in &mut[&mut track0, &mut track1, &mut track2, &mut track3] {
+            for track in &mut[&mut track0, &mut track1, &mut track2] {
                 let (start_frame, event) = track.notes[track.play_idx];
                 if (frame_count % track.max_frames) == start_frame {
                     if let Some((note, volume, waveform)) = event {
                         println!("{:?} {:?} @ {} in {:?}", track.channel, note, start_frame, waveform);
-                        synth.play(track.channel, note, None, volume, waveform);
+                        synth.play(track.channel, note, volume, waveform);
                     } else {
                         synth.off(track.channel);
                     }
