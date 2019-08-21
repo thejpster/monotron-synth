@@ -26,7 +26,8 @@ fn main() -> Result<(), pulse::error::PAErr> {
         &spec,               // Our sample format
         None,                // Use default channel map
         None,                // Use default buffering attributes
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut synth = Synth::new(SAMPLE_RATE);
 
