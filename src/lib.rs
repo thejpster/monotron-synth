@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(const_fn)]
 
 pub const MAX_VOLUME: u8 = 255;
 
