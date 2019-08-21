@@ -45,7 +45,8 @@ fn main() -> Result<(), Error> {
         &spec,               // Our sample format
         None,                // Use default channel map
         None,                // Use default buffering attributes
-    ).unwrap();
+    )
+    .unwrap();
 
     let mut synth = Synth::new(SAMPLE_RATE);
 
@@ -89,10 +90,12 @@ fn main() -> Result<(), Error> {
         play_idx: 0,
         max_frames: 120,
         notes: &[
-            (30, Some((Note::C3, MAX_VOLUME, Waveform::Noise))),
+            (30, Some((Note::C1, MAX_VOLUME, Waveform::Noise))),
             (33, None),
-            (90, Some((Note::C3, MAX_VOLUME, Waveform::Noise))),
+            (90, Some((Note::C1, MAX_VOLUME, Waveform::Noise))),
             (93, None),
+            (105, Some((Note::C1, MAX_VOLUME, Waveform::Noise))),
+            (108, None),
         ],
     };
 
