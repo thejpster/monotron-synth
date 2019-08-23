@@ -65,6 +65,8 @@ fn main() -> Result<(), Error> {
 
     struct Track<'a> {
         channel: Channel,
+        waveform: Waveform,
+        volume: u8,
         play_idx: usize,
         play_next_at: usize,
         notes: &'a [(Option<Note>, Length)],
@@ -84,6 +86,8 @@ fn main() -> Result<(), Error> {
         channel: Channel::Channel0,
         play_idx: 0,
         play_next_at: 0,
+        waveform: Waveform::Square,
+        volume: MAX_VOLUME / 2,
         notes: &[
             // Bar 1
             (Some(Note::E5), Length::Quarter),
@@ -139,6 +143,8 @@ fn main() -> Result<(), Error> {
     let mut track1 = Track {
         channel: Channel::Channel1,
         play_idx: 0,
+        waveform: Waveform::Square,
+        volume: MAX_VOLUME / 2,
         play_next_at: 0,
         notes: &[
             (Some(Note::B4), Length::Quarter),
@@ -204,6 +210,8 @@ fn main() -> Result<(), Error> {
     let mut track2 = Track {
         channel: Channel::Channel2,
         play_idx: 0,
+        waveform: Waveform::Sawtooth,
+        volume: MAX_VOLUME,
         play_next_at: 0,
         notes: &[
             // Bar 1
@@ -292,7 +300,7 @@ fn main() -> Result<(), Error> {
                             "{:?} {:?} @ {} for {:?}",
                             track.channel, pitch, track.play_next_at, length
                         );
-                        synth.play(track.channel, *pitch, MAX_VOLUME, Waveform::Sawtooth);
+                        synth.play(track.channel, *pitch, track.volume, track.waveform);
                     } else {
                         synth.off(track.channel);
                     }
